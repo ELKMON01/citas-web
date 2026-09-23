@@ -4,14 +4,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LoginScreen } from './LoginScreen';
 import { RegisterScreen } from './RegisterScreen';
 import * as auth from '../auth/authApi';
+import { catalogsApi } from '../api/schedulingApi';
 
 vi.mock('../auth/authApi', async (original) => {
   const actual = await original<typeof import('../auth/authApi')>();
   return { ...actual, login: vi.fn(), register: vi.fn() };
 });
 
+vi.mock('../api/schedulingApi', () => ({
+  catalogsApi: { insurancePlans: vi.fn() },
+}));
+
 describe('pantallas de autenticación', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(catalogsApi.insurancePlans).mockResolvedValue([
+      { id: '7', name: 'Plan Particular Demo' },
+    ]);
+  });
 
   it('envía las credenciales y muestra el resultado de un login válido', async () => {
     const user = userEvent.setup();
@@ -60,5 +70,40 @@ describe('pantallas de autenticación', () => {
       email: 'ana@example.com', phone: '3001234567', password: 'Password123*',
     }));
     expect(onSuccess).toHaveBeenCalledWith(account);
+  });
+
+  it('carga los planes activos y permite registrar sin afiliación', async () => {
+    const user = userEvent.setup();
+    vi.mocked(auth.register).mockResolvedValue({ id: '3', name: 'Ana Ruiz', email: 'ana@example.com', roles: ['USER'] });
+    render(<RegisterScreen onRegisterSuccess={vi.fn()} onNavigateLogin={vi.fn()} />);
+
+    expect(await screen.findByRole('option', { name: 'Plan Particular Demo' })).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/nombres/i), 'Ana');
+    await user.type(screen.getByLabelText(/apellidos/i), 'Ruiz');
+    await user.type(screen.getByLabelText(/correo electrónico/i), 'ana@example.com');
+    await user.type(screen.getByLabelText(/teléfono móvil/i), '3001234567');
+    await user.type(screen.getByLabelText(/número de documento/i), '123456');
+    await user.type(screen.getByLabelText(/^contraseña/i), 'Password123*');
+    await user.click(screen.getByRole('button', { name: /registrarme y acceder/i }));
+
+    expect(auth.register).toHaveBeenCalledWith(expect.not.objectContaining({ insurancePlanId: expect.anything() }));
+  });
+
+  it('envía el plan elegido como identificador, nunca como nombre', async () => {
+    const user = userEvent.setup();
+    vi.mocked(auth.register).mockResolvedValue({ id: '4', name: 'Ana Ruiz', email: 'ana@example.com', roles: ['USER'] });
+    render(<RegisterScreen onRegisterSuccess={vi.fn()} onNavigateLogin={vi.fn()} />);
+
+    await user.selectOptions(await screen.findByLabelText(/plan de afiliación/i), '7');
+    await user.type(screen.getByLabelText(/nombres/i), 'Ana');
+    await user.type(screen.getByLabelText(/apellidos/i), 'Ruiz');
+    await user.type(screen.getByLabelText(/correo electrónico/i), 'ana@example.com');
+    await user.type(screen.getByLabelText(/teléfono móvil/i), '3001234567');
+    await user.type(screen.getByLabelText(/número de documento/i), '123456');
+    await user.type(screen.getByLabelText(/^contraseña/i), 'Password123*');
+    await user.click(screen.getByRole('button', { name: /registrarme y acceder/i }));
+
+    expect(auth.register).toHaveBeenCalledWith(expect.objectContaining({ insurancePlanId: '7' }));
+    expect(vi.mocked(auth.register).mock.calls[0][0]).not.toHaveProperty('planName');
   });
 });
