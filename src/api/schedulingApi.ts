@@ -1,5 +1,5 @@
 import { getAccessToken } from '../auth/authApi';
-import type { Appointment, AvailabilityBlock, AvailableProfessional, CatalogItem, Professional, Specialty } from '../types';
+import type { Appointment, AppointmentStatus, AppointmentStatusHistory, AvailabilityBlock, AvailableProfessional, CatalogItem, LifecycleAppointment, Professional, ReschedulingRequest, Specialty } from '../types';
 
 const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
 export class SchedulingApiError extends Error { constructor(public readonly status: number, message: string) { super(message); this.name = 'SchedulingApiError'; } }
@@ -21,12 +21,25 @@ export const appointmentsApi = {
 export const adminApi = {
   specialties: () => request<Specialty[]>('/admin/specialties'), createSpecialty: (input: { code: string; name: string; durationMinutes: 30 | 60; general: boolean }) => request<Specialty>('/admin/specialties', { method: 'POST', body: JSON.stringify(input) }),
   updateSpecialty: (id: string, input: Partial<{ name: string; durationMinutes: 30 | 60; active: boolean }>) => request<Specialty>(`/admin/specialties/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
-  createProfessional: (input: Record<string, unknown>) => request<Professional>('/admin/professionals', { method: 'POST', body: JSON.stringify(input) }),
+  professionals: () => request<Professional[]>('/admin/professionals'),
+  createProfessional: (input: { firstName: string; lastName: string; documentType: string; documentNumber: string; email: string; phone: string; temporaryPassword: string; professionalCode: string; licenseNumber: string }) => request<{ id: number }>('/admin/professionals', { method: 'POST', body: JSON.stringify(input) }),
   assignSpecialties: (id: string, specialtyIds: string[], primarySpecialtyId: string) => request<void>(`/admin/professionals/${id}/specialties`, { method: 'PUT', body: JSON.stringify({ specialtyIds, primarySpecialtyId }) }),
-  assignLocations: (id: string, locationIds: string[]) => request<void>(`/admin/professionals/${id}/locations`, { method: 'PUT', body: JSON.stringify({ locationIds }) }), setActive: (id: string, active: boolean) => request<Professional>(`/admin/professionals/${id}/active`, { method: 'PATCH', body: JSON.stringify({ active }) }),
+  assignLocations: (id: string, locationIds: string[]) => request<void>(`/admin/professionals/${id}/locations`, { method: 'PUT', body: JSON.stringify({ locationIds }) }), setActive: (id: string, active: boolean) => request<void>(`/admin/professionals/${id}/active`, { method: 'PATCH', body: JSON.stringify({ active }) }),
 };
 export const availabilityApi = {
   listMine: (date?: string, locationId?: string) => request<AvailabilityBlock[]>(`/professional/availability-blocks${query({ date, locationId })}`), create: (input: Omit<AvailabilityBlock, 'id' | 'locationName'>) => request<AvailabilityBlock>('/professional/availability-blocks', { method: 'POST', body: JSON.stringify(input) }),
   update: (id: string, input: Partial<Omit<AvailabilityBlock, 'id' | 'locationName'>>) => request<AvailabilityBlock>(`/professional/availability-blocks/${id}`, { method: 'PATCH', body: JSON.stringify(input) }), remove: (id: string) => request<void>(`/professional/availability-blocks/${id}`, { method: 'DELETE' }),
+};
+export const lifecycleApi = {
+  myAppointments: (filters: { status?: AppointmentStatus; from?: string; to?: string } = {}) => request<LifecycleAppointment[]>(`/user/appointments${query(filters)}`),
+  myAppointment: (id: string) => request<LifecycleAppointment>(`/user/appointments/${encodeURIComponent(id)}`),
+  rescheduleAvailability: (filters: { locationId: string; specialtyId: string; professionalId: string; date: string }) => request<Array<{ professionalId: number; professionalName: string; startAt: string; endAt: string }>>(`/availability${query(filters)}`),
+  cancel: (id: string, reason?: string) => request<void>(`/user/appointments/${encodeURIComponent(id)}/cancellation`, { method: 'POST', ...(reason?.trim() ? { body: JSON.stringify({ reason: reason.trim() }) } : {}) }),
+  reschedule: (id: string, date: string, startTime: string) => request<ReschedulingRequest>(`/user/appointments/${encodeURIComponent(id)}/rescheduling-requests`, { method: 'POST', body: JSON.stringify({ date, startTime }) }),
+  pendingReschedules: (filters: { locationId?: string; professionalId?: string; specialtyId?: string; date?: string } = {}) => request<ReschedulingRequest[]>(`/admin/rescheduling-requests${query(filters)}`),
+  decideReschedule: (id: string, decision: 'APPROVE' | 'REJECT', reason?: string) => request<ReschedulingRequest>(`/admin/rescheduling-requests/${encodeURIComponent(id)}/decision`, { method: 'POST', body: JSON.stringify({ decision, ...(reason?.trim() ? { reason: reason.trim() } : {}) }) }),
+  professionalAppointments: (filters: { from: string; to: string; locationId?: string }) => request<LifecycleAppointment[]>(`/professional/appointments${query(filters)}`),
+  closeAppointment: (id: string, status: 'COMPLETED' | 'NO_SHOW') => request<void>(`/professional/appointments/${encodeURIComponent(id)}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  statusHistory: (id: string) => request<AppointmentStatusHistory[]>(`/appointments/${encodeURIComponent(id)}/status-history`),
 };
 export function schedulingErrorMessage(error: unknown): string { if (!(error instanceof SchedulingApiError)) return 'Ocurrió un error inesperado.'; if (error.status === 401) return 'Tu sesión venció. Inicia sesión nuevamente.'; if (error.status === 403) return 'No tienes permiso para realizar esta acción.'; if (error.status === 404) return 'El recurso solicitado no está disponible.'; if (error.status === 409) return 'El horario dejó de estar disponible. Selecciona otro horario.'; if (error.status === 400) return 'Revisa los datos ingresados.'; return error.message; }
