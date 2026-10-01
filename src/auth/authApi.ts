@@ -18,6 +18,8 @@ export interface Registration {
   insurancePlanId?: string;
 }
 
+export interface PasswordResetRequestResult { message: string; devToken?: string; }
+
 interface RegistrationResponse extends Omit<Registration, 'password'> {
   id: string | number;
   role: string;
@@ -166,6 +168,20 @@ export async function logout(): Promise<void> {
   await request<void>('/logout', { method: 'POST' });
   accessToken = null;
   clearUser();
+}
+
+export async function requestPasswordReset(email: string): Promise<PasswordResetRequestResult> {
+  return request<PasswordResetRequestResult>('/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  await request<void>('/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, newPassword }),
+  });
 }
 
 export function getAccessToken(): string | null {

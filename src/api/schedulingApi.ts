@@ -1,5 +1,5 @@
 import { getAccessToken } from '../auth/authApi';
-import type { Appointment, AppointmentStatus, AppointmentStatusHistory, AvailabilityBlock, AvailableProfessional, CatalogItem, LifecycleAppointment, Professional, ReschedulingRequest, Specialty } from '../types';
+import type { Affiliation, Appointment, AppointmentStatus, AppointmentStatusHistory, AvailabilityBlock, AvailableProfessional, CatalogItem, LifecycleAppointment, Professional, Profile, ReschedulingRequest, Specialty } from '../types';
 
 const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
 export class SchedulingApiError extends Error { constructor(public readonly status: number, message: string) { super(message); this.name = 'SchedulingApiError'; } }
@@ -12,6 +12,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (response.status === 204) return undefined as T; return response.json() as Promise<T>;
 }
 export const catalogsApi = { locations: () => request<CatalogItem[]>('/catalogs/locations'), insurancePlans: () => request<CatalogItem[]>('/catalogs/plans'), specialties: () => request<Specialty[]>('/specialties') };
+export const profileApi = {
+  read: () => request<Profile>('/user/profile'),
+  update: (input: Partial<Pick<Profile, 'firstName' | 'lastName' | 'phone'>>) => request<Profile>('/user/profile', { method: 'PATCH', body: JSON.stringify(input) }),
+  setAffiliation: (planId: string, membershipNumber?: string) => request<Affiliation>('/user/affiliation', { method: 'PUT', body: JSON.stringify({ planId, ...(membershipNumber?.trim() ? { membershipNumber: membershipNumber.trim() } : {}) }) }),
+  removeAffiliation: () => request<void>('/user/affiliation', { method: 'DELETE' }),
+};
 export const appointmentsApi = {
   availability: (filters: { locationId: string; specialtyId: string; professionalId?: string; date: string }) => request<AvailableProfessional[]>(`/availability${query(filters)}`),
   create: (input: { professionalId: string; locationId: string; specialtyId: string; date: string; startTime: string; reason?: string }) => request<Appointment>('/appointments', { method: 'POST', body: JSON.stringify(input) }),

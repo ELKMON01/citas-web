@@ -18,6 +18,6 @@ npm test
 npm run build
 ```
 
-Las pantallas de agenda conservan datos sintéticos del prototipo hasta que sus HU backend sean implementadas. Recuperación de contraseña permanece fuera del alcance.
+Las pantallas de agenda conservan datos sintéticos del prototipo hasta que sus HU backend sean implementadas. El cliente ya incluye recuperación de contraseña, edición del perfil propio y gestión de afiliación mediante el API REST.
 
 ---

@@ -4,6 +4,7 @@ import { adminApi, appointmentsApi, availabilityApi, catalogsApi, schedulingErro
 import type { Appointment, AvailabilityBlock, CatalogItem, Specialty, User } from '../types';
 import { AdminProfessionals } from './AdminProfessionals';
 import { AdminReschedulingQueue, ProfessionalAgenda, UserAppointments } from './LifecycleScreens';
+import { ProfilePanel } from './ProfilePanel';
 
 interface Props { user: User; onOpenBooking: () => void; onLogout: () => void; }
 const heading = (role: string) => role === 'ADMIN' ? 'Administración de la oferta' : role === 'PROFESSIONAL' ? 'Mi disponibilidad' : 'Agenda tu atención';
@@ -17,7 +18,7 @@ export function DashboardScreen({ user, onOpenBooking, onLogout }: Props) {
   </div>;
 }
 
-function UserHome({ onOpenBooking }: { onOpenBooking: () => void }) { return <><section className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 text-center space-y-4"><div className="w-14 h-14 mx-auto bg-blue-50 rounded-2xl text-blue-600 flex items-center justify-center"><Calendar /></div><h1 className="text-2xl font-bold text-slate-900">Encuentra un horario disponible</h1><p className="max-w-xl mx-auto text-sm text-slate-500">Selecciona sede, especialidad, profesional y horario. El sistema confirma la disponibilidad al enviar la solicitud.</p><button type="button" onClick={onOpenBooking} className="px-5 py-3 bg-blue-600 text-white text-sm font-semibold rounded-xl">Buscar y agendar</button></section><UserAppointments /></>; }
+function UserHome({ onOpenBooking }: { onOpenBooking: () => void }) { return <><section className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 text-center space-y-4"><div className="w-14 h-14 mx-auto bg-blue-50 rounded-2xl text-blue-600 flex items-center justify-center"><Calendar /></div><h1 className="text-2xl font-bold text-slate-900">Encuentra un horario disponible</h1><p className="max-w-xl mx-auto text-sm text-slate-500">Selecciona sede, especialidad, profesional y horario. El sistema confirma la disponibilidad al enviar la solicitud.</p><button type="button" onClick={onOpenBooking} className="px-5 py-3 bg-blue-600 text-white text-sm font-semibold rounded-xl">Buscar y agendar</button></section><ProfilePanel /><UserAppointments /></>; }
 
 function AdminHome() {
   const [specialties, setSpecialties] = useState<Specialty[]>([]); const [pending, setPending] = useState<Appointment[]>([]); const [error, setError] = useState(''); const [name, setName] = useState(''); const [code, setCode] = useState(''); const [duration, setDuration] = useState<30 | 60>(30); const [general, setGeneral] = useState(false); const [reasons, setReasons] = useState<Record<string, string>>({});

@@ -1,7 +1,9 @@
-export type ScreenType = 'login' | 'register' | 'dashboard';
+export type ScreenType = 'login' | 'register' | 'forgot-password' | 'reset-password' | 'dashboard';
 export type UserRole = 'USER' | 'ADMIN' | 'PROFESSIONAL';
 
 export interface User { id: string; name: string; email: string; phone?: string; roles?: string[]; }
+export interface Affiliation { id: string; membershipNumber: string; plan: CatalogItem; eps: CatalogItem; regime: CatalogItem; }
+export interface Profile extends User { firstName: string; lastName: string; documentType: string; documentNumber: string; affiliation?: Affiliation | null; }
 export interface CatalogItem { id: string; name: string; code?: string; active?: boolean; }
 export interface Specialty extends CatalogItem { durationMinutes: 30 | 60; appointmentType?: 'GENERAL' | 'SPECIALIZED'; }
 export interface Professional extends CatalogItem { email?: string; active?: boolean; professionalCode?: string; licenseNumber?: string; specialties?: Specialty[]; locationIds?: string[]; }
